@@ -9,13 +9,13 @@ import (
 	"syscall"
 	"time"
 
-	"godaddy-dns-sync/internal/config"
-	"godaddy-dns-sync/internal/db"
-	"godaddy-dns-sync/internal/godaddy"
-	"godaddy-dns-sync/internal/httpapi"
-	"godaddy-dns-sync/internal/middleware"
-	"godaddy-dns-sync/internal/repository"
-	"godaddy-dns-sync/internal/service"
+	"adnx_dns/internal/config"
+	"adnx_dns/internal/db"
+	"adnx_dns/internal/godaddy"
+	"adnx_dns/internal/httpapi"
+	"adnx_dns/internal/middleware"
+	"adnx_dns/internal/repository"
+	"adnx_dns/internal/service"
 )
 
 func main() {

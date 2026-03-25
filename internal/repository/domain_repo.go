@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"godaddy-dns-sync/internal/model"
+	"adnx_dns/internal/model"
 )
 
 type DomainRepository struct{ DB *sql.DB }

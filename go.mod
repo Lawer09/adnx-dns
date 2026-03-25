@@ -1,4 +1,4 @@
-module godaddy-dns-sync
+module adnx_dns
 
 go 1.22
 

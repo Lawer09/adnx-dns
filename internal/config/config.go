@@ -25,7 +25,7 @@ func Load(path string) (*Config, error) {
 	cfg := &Config{
 		HTTPAddr:                  getenv("HTTP_ADDR", ":8080"),
 		APIToken:                  getenv("API_TOKEN", ""),
-		MySQLDSN:                  getenv("MYSQL_DSN", "root:password@tcp(127.0.0.1:3306)/godaddy_dns?parseTime=true&charset=utf8mb4&loc=Local"),
+		MySQLDSN:                  getenv("MYSQL_DSN", "root:password@tcp(127.0.0.1:3306)/adnx_dns?parseTime=true&charset=utf8mb4&loc=Local"),
 		GoDaddyBaseURL:            getenv("GODADDY_BASE_URL", "https://api.godaddy.com"),
 		GoDaddyAPIKey:             getenv("GODADDY_API_KEY", ""),
 		GoDaddyAPISecret:          getenv("GODADDY_API_SECRET", ""),

@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 
-	"godaddy-dns-sync/internal/model"
+	"adnx_dns/internal/model"
 )
 
 type BindingRepository struct{ DB *sql.DB }

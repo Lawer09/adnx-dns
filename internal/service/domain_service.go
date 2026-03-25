@@ -5,9 +5,9 @@ import (
 	"database/sql"
 	"time"
 
-	"godaddy-dns-sync/internal/godaddy"
-	"godaddy-dns-sync/internal/model"
-	"godaddy-dns-sync/internal/repository"
+	"adnx_dns/internal/godaddy"
+	"adnx_dns/internal/model"
+	"adnx_dns/internal/repository"
 )
 
 type DomainService struct {

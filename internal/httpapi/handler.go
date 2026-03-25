@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"godaddy-dns-sync/internal/service"
+	"adnx_dns/internal/service"
 )
 
 type Handler struct {

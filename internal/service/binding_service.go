@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"strings"
 
-	"godaddy-dns-sync/internal/godaddy"
-	"godaddy-dns-sync/internal/repository"
-	"godaddy-dns-sync/internal/util"
+	"adnx_dns/internal/godaddy"
+	"adnx_dns/internal/repository"
+	"adnx_dns/internal/util"
 )
 
 type BindingService struct {
