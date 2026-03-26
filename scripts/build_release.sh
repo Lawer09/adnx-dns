@@ -1,4 +1,4 @@
-!/usr/bin/env bash
+#!/usr/bin/env bash
 set -euo pipefail
 APP_NAME="adnx_dns"
 VERSION="1.0.0"

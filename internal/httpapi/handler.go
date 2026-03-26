@@ -3,9 +3,9 @@ package httpapi
 import (
 	"encoding/json"
 	"net/http"
-	"strconv"
 	"strings"
 
+	"adnx_dns/internal/errs"
 	"adnx_dns/internal/service"
 )
 
@@ -14,50 +14,94 @@ type Handler struct {
 	Bindings *service.BindingService
 }
 
-func writeJSON(w http.ResponseWriter, code int, v any) {
+type Response struct {
+	Code    int         `json:"code"`
+	Data    interface{} `json:"data"`
+	Message string      `json:"message"`
+}
+
+func writeJSON(w http.ResponseWriter, status int, payload Response) {
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(code)
-	_ = json.NewEncoder(w).Encode(v)
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(payload)
 }
 
-func (h *Handler) ListDomains(w http.ResponseWriter, r *http.Request) {
+func ok(w http.ResponseWriter, data interface{}, msg string) {
+	if msg == "" { msg = "ok" }
+	writeJSON(w, http.StatusOK, Response{Code: errs.CodeOK, Data: data, Message: msg})
+}
+
+func fail(w http.ResponseWriter, e error) {
+	if app, ok := e.(*errs.AppError); ok {
+		writeJSON(w, http.StatusOK, Response{Code: app.Code, Data: nil, Message: app.Message})
+		return
+	}
+	writeJSON(w, http.StatusOK, Response{Code: errs.CodeInternal, Data: nil, Message: e.Error()})
+}
+
+func decode(r *http.Request, out any) error {
+	defer r.Body.Close()
+	return json.NewDecoder(r.Body).Decode(out)
+}
+
+func (h *Handler) GetAvailableDomains(w http.ResponseWriter, r *http.Request) {
 	items, err := h.Domains.ListAvailable(r.Context())
-	if err != nil { writeJSON(w, 500, map[string]any{"message":err.Error()}); return }
-	writeJSON(w, 200, map[string]any{"message":"success", "data":items})
+	if err != nil { fail(w, err); return }
+	ok(w, items, "ok")
 }
 
-func (h *Handler) Bind(w http.ResponseWriter, r *http.Request) {
-	var req service.BindRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil { writeJSON(w, 400, map[string]any{"message":"invalid json"}); return }
-	resp, code, err := h.Bindings.Bind(r.Context(), req)
-	if err != nil { writeJSON(w, code, map[string]any{"message":err.Error()}); return }
-	writeJSON(w, code, resp)
+func (h *Handler) GetAvailableDomainDetails(w http.ResponseWriter, r *http.Request) {
+	items, err := h.Domains.ListAvailableDetails(r.Context())
+	if err != nil { fail(w, err); return }
+	ok(w, items, "ok")
 }
 
-func (h *Handler) DisableDomain(w http.ResponseWriter, r *http.Request) {
-	idStr := strings.TrimPrefix(r.URL.Path, "/api/v1/domains/")
-	idStr = strings.TrimSuffix(idStr, "/disable")
-	idStr = strings.Trim(idStr, "/")
-	id, err := strconv.ParseUint(idStr, 10, 64)
-	if err != nil { writeJSON(w, 400, map[string]any{"message":"invalid domain id"}); return }
-	if err := h.Domains.Disable(r.Context(), id); err != nil { writeJSON(w, 500, map[string]any{"message":err.Error()}); return }
-	writeJSON(w, 200, map[string]any{"message":"domain disabled locally"})
+func (h *Handler) GetUnavailableDomains(w http.ResponseWriter, r *http.Request) {
+	items, err := h.Domains.ListUnavailable(r.Context())
+	if err != nil { fail(w, err); return }
+	ok(w, items, "ok")
+}
+
+func (h *Handler) ResolveIP(w http.ResponseWriter, r *http.Request) {
+	var req service.ResolveRequest
+	if err := decode(r, &req); err != nil { fail(w, errs.New(errs.CodeInvalidParam, "invalid json")); return }
+	resp, err := h.Bindings.Resolve(r.Context(), req)
+	if err != nil { fail(w, err); return }
+	ok(w, resp, "resolve success")
+}
+
+func (h *Handler) GetBindingsByIP(w http.ResponseWriter, r *http.Request) {
+	resp, err := h.Bindings.ListByIP(r.Context(), r.URL.Query().Get("ipv4"))
+	if err != nil { fail(w, err); return }
+	ok(w, resp, "ok")
 }
 
 func (h *Handler) Unbind(w http.ResponseWriter, r *http.Request) {
 	var req service.UnbindRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil { writeJSON(w, 400, map[string]any{"message":"invalid json"}); return }
-	resp, code, err := h.Bindings.Unbind(r.Context(), req)
-	if err != nil { writeJSON(w, code, map[string]any{"message":err.Error()}); return }
-	writeJSON(w, code, resp)
+	if err := decode(r, &req); err != nil { fail(w, errs.New(errs.CodeInvalidParam, "invalid json")); return }
+	resp, err := h.Bindings.Unbind(r.Context(), req)
+	if err != nil { fail(w, err); return }
+	ok(w, resp, "unbind success")
+}
+
+func (h *Handler) DisableDomain(w http.ResponseWriter, r *http.Request) {
+	var req struct{ Domain string `json:"domain"` }
+	if err := decode(r, &req); err != nil { fail(w, errs.New(errs.CodeInvalidParam, "invalid json")); return }
+	if strings.TrimSpace(req.Domain) == "" { fail(w, errs.New(errs.CodeInvalidParam, "domain is required")); return }
+	if err := h.Domains.SetEnabled(r.Context(), req.Domain, false); err != nil { fail(w, err); return }
+	ok(w, map[string]any{"domain": strings.ToLower(strings.TrimSpace(req.Domain)), "enabled": false}, "domain disabled")
+}
+
+func (h *Handler) EnableDomain(w http.ResponseWriter, r *http.Request) {
+	var req struct{ Domain string `json:"domain"` }
+	if err := decode(r, &req); err != nil { fail(w, errs.New(errs.CodeInvalidParam, "invalid json")); return }
+	if strings.TrimSpace(req.Domain) == "" { fail(w, errs.New(errs.CodeInvalidParam, "domain is required")); return }
+	if err := h.Domains.SetEnabled(r.Context(), req.Domain, true); err != nil { fail(w, err); return }
+	ok(w, map[string]any{"domain": strings.ToLower(strings.TrimSpace(req.Domain)), "enabled": true}, "domain enabled")
 }
 
 func (h *Handler) SyncDomains(w http.ResponseWriter, r *http.Request) {
-	if err := h.Domains.SyncFromGoDaddy(r.Context()); err != nil {
-		code := 500
-		if strings.Contains(strings.ToLower(err.Error()), "rate limit") || strings.Contains(err.Error(), "429") { code = 429 }
-		writeJSON(w, code, map[string]any{"message":err.Error()})
-		return
-	}
-	writeJSON(w, 200, map[string]any{"message":"domain sync success"})
+	resp, err := h.Domains.SyncFromGoDaddy(r.Context())
+	if err != nil { fail(w, err); return }
+	ok(w, resp, "sync success")
 }

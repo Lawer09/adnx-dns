@@ -2,6 +2,7 @@ package config
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -25,7 +26,7 @@ func Load(path string) (*Config, error) {
 	cfg := &Config{
 		HTTPAddr:                  getenv("HTTP_ADDR", ":8080"),
 		APIToken:                  getenv("API_TOKEN", ""),
-		MySQLDSN:                  getenv("MYSQL_DSN", "root:password@tcp(127.0.0.1:3306)/adnx_dns?parseTime=true&charset=utf8mb4&loc=Local"),
+		MySQLDSN:                  mysqlDSN(),
 		GoDaddyBaseURL:            getenv("GODADDY_BASE_URL", "https://api.godaddy.com"),
 		GoDaddyAPIKey:             getenv("GODADDY_API_KEY", ""),
 		GoDaddyAPISecret:          getenv("GODADDY_API_SECRET", ""),
@@ -35,6 +36,16 @@ func Load(path string) (*Config, error) {
 		RandomSubdomainLength:     atoi(getenv("RANDOM_SUBDOMAIN_LENGTH", "8"), 8),
 	}
 	return cfg, nil
+}
+
+func mysqlDSN() string {
+	if v := strings.TrimSpace(os.Getenv("MYSQL_DSN")); v != "" { return v }
+	host := getenv("MYSQL_HOST", "127.0.0.1")
+	port := getenv("MYSQL_PORT", "3306")
+	user := getenv("MYSQL_USER", "root")
+	pass := getenv("MYSQL_PASSWORD", "password")
+	db := getenv("MYSQL_DB", "adnx_dns")
+	return fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true&charset=utf8mb4&loc=Local", user, pass, host, port, db)
 }
 
 func getenv(k, def string) string {
@@ -65,16 +76,11 @@ func loadEnvFile(path string) error {
 	s := bufio.NewScanner(f)
 	for s.Scan() {
 		line := strings.TrimSpace(s.Text())
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
-		}
+		if line == "" || strings.HasPrefix(line, "#") { continue }
 		parts := strings.SplitN(line, "=", 2)
-		if len(parts) != 2 {
-			continue
-		}
+		if len(parts) != 2 { continue }
 		key := strings.TrimSpace(parts[0])
-		val := strings.TrimSpace(parts[1])
-		val = strings.Trim(val, "\"")
+		val := strings.Trim(strings.TrimSpace(parts[1]), `"`)
 		if _, ok := os.LookupEnv(key); !ok {
 			_ = os.Setenv(key, val)
 		}

@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS ip_bindings (
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY uk_fqdn (fqdn),
-    UNIQUE KEY uk_ipv4 (ipv4),
+    KEY idx_ipv4_status (ipv4, status),
     KEY idx_domain_sub (domain_id, subdomain, status),
     CONSTRAINT fk_bind_domain FOREIGN KEY (domain_id) REFERENCES domains(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
